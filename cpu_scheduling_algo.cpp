@@ -4,6 +4,7 @@
 #include <sstream>
 #include <tuple>
 #include <utility>
+#include <algorithm>
 using namespace std;
 
 // Function to parse the input
@@ -86,6 +87,62 @@ void printInput(
     }
 }
 
+
+//Algorithms
+// FCFS Scheduling Algorithm
+// FCFS Scheduling implementation
+void fcfs(const std::vector<std::tuple<std::string, int, int>>& processes) {
+    int n = processes.size();
+
+    // Vectors to store process details
+    vector<int> startTime(n), finishTime(n), turnaroundTime(n), waitingTime(n);
+
+    // Sorting by Arrival Time (if not already sorted)
+    vector<tuple<string, int, int>> sortedProcesses = processes;
+    sort(sortedProcesses.begin(), sortedProcesses.end(), [](auto& a, auto& b) {
+        return get<1>(a) < get<1>(b);
+    });
+
+    // Initialize start time, finish time, turnaround time, and waiting time
+    int currentTime = 0;
+    for (int i = 0; i < n; ++i) {
+        string processName = get<0>(sortedProcesses[i]);
+        int arrivalTime = get<1>(sortedProcesses[i]);
+        int serviceTime = get<2>(sortedProcesses[i]);
+
+        startTime[i] = max(currentTime, arrivalTime); // start when available
+        finishTime[i] = startTime[i] + serviceTime;
+        turnaroundTime[i] = finishTime[i] - arrivalTime;
+        waitingTime[i] = turnaroundTime[i] - serviceTime;
+
+        currentTime = finishTime[i]; // update current time
+    }
+
+    // Calculate average turnaround time and average waiting time as float
+    float avgTurnaroundTime = 0.0f, avgWaitingTime = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        avgTurnaroundTime += turnaroundTime[i];
+        avgWaitingTime += waitingTime[i];
+    }
+
+    avgTurnaroundTime /= n;
+    avgWaitingTime /= n;
+
+    // Output Results
+    cout << "FCFS Scheduling:\n";
+    for (int i = 0; i < n; ++i) {
+        cout << "Process " << get<0>(sortedProcesses[i]) << ": "
+             << "Arrival Time = " << get<1>(sortedProcesses[i]) 
+             << ", Start Time = " << startTime[i] 
+             << ", Finish Time = " << finishTime[i] 
+             << ", Turnaround Time = " << turnaroundTime[i] 
+             << ", Waiting Time = " << waitingTime[i] << endl;
+    }
+
+    cout << "\nAverage Turnaround Time: " << avgTurnaroundTime << endl;
+    cout << "Average Waiting Time: " << avgWaitingTime << endl;
+}
+
 int main() {
     std::string operation;
     std::vector<std::pair<int, int>> algorithms; // {algorithm_id, quantum (-1 if not applicable)}
@@ -95,6 +152,9 @@ int main() {
     parseInput(operation, algorithms, lastInstant, processCount, processes);
     printInput(operation, algorithms, lastInstant, processCount, processes);
 
+
+    // Call the FCFS algorithm
+    fcfs(processes);
 
     return 0;
 }
