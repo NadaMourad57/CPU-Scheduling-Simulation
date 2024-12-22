@@ -14,9 +14,9 @@
 
 -Aging
 
-`Input handling`
+`Input handling` done
 
-`Makefile`
+`Makefile` done
 
 lab6/
 ├── CPU-Scheduling-Simulation/      # Folder containing the simulation code

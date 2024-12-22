@@ -54,9 +54,9 @@ void parseInput(
 
         std::string processName = processLine.substr(0, pos1);
         int arrivalTime = std::stoi(processLine.substr(pos1 + 1, pos2 - pos1 - 1));
-        int serviceTime = std::stoi(processLine.substr(pos2 + 1));
+        int serviceTime_priority = std::stoi(processLine.substr(pos2 + 1));
 
-        processes.emplace_back(processName, arrivalTime, serviceTime);
+        processes.emplace_back(processName, arrivalTime, serviceTime_priority);
     }
 }
 
@@ -81,7 +81,7 @@ void printInput(
     for (const auto& process : processes) {
         std::cout << "Name: " << std::get<0>(process) 
                   << ", Arrival Time: " << std::get<1>(process) 
-                  << ", Service Time: " << std::get<2>(process) 
+                  << ", Service Time / Priority: " << std::get<2>(process) 
                   << "\n";
     }
 }
@@ -94,7 +94,7 @@ int main() {
 
     parseInput(operation, algorithms, lastInstant, processCount, processes);
     printInput(operation, algorithms, lastInstant, processCount, processes);
-    
+
 
     return 0;
 }
