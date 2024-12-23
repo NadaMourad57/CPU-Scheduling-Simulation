@@ -241,6 +241,83 @@ void roundRobin(const vector<tuple<string, int, int>>& processes, int quantum) {
 }
 
 
+void hrrn(const std::vector<std::tuple<std::string, int, int>>& processes) {
+    int n = processes.size();
+    std::vector<bool> completed(n, false); // Track completed processes
+    std::vector<int> startTime(n), finishTime(n), turnaroundTime(n), waitingTime(n);
+    int currentTime = 0;
+
+    for (int completedCount = 0; completedCount < n; ++completedCount) {
+        // Calculate response ratios for all ready processes
+        float maxResponseRatio = -1.0f;
+        int selectedProcess = -1;
+
+        std::cout << "Current Time: " << currentTime << "\n";
+        for (int i = 0; i < n; ++i) {
+            if (!completed[i] && std::get<1>(processes[i]) <= currentTime) {
+                int arrivalTime = std::get<1>(processes[i]);
+                int serviceTime = std::get<2>(processes[i]);
+                int waitingTime = currentTime - arrivalTime;
+                float responseRatio = (waitingTime + serviceTime) / (float)serviceTime;
+
+                // Print the response ratio for the process
+                std::cout << "Process " << std::get<0>(processes[i])
+                          << ": Response Ratio = " << responseRatio << "\n";
+
+                if (responseRatio > maxResponseRatio) {
+                    maxResponseRatio = responseRatio;
+                    selectedProcess = i;
+                }
+            }
+        }
+
+        // If no process is ready, advance time
+        if (selectedProcess == -1) {
+            currentTime++;
+            continue;
+        }
+
+        // Execute the selected process
+        int arrivalTime = std::get<1>(processes[selectedProcess]);
+        int serviceTime = std::get<2>(processes[selectedProcess]);
+
+        startTime[selectedProcess] = currentTime;
+        finishTime[selectedProcess] = currentTime + serviceTime;
+        turnaroundTime[selectedProcess] = finishTime[selectedProcess] - arrivalTime;
+        waitingTime[selectedProcess] = turnaroundTime[selectedProcess] - serviceTime;
+        currentTime += serviceTime;
+
+        completed[selectedProcess] = true;
+
+        std::cout << "Selected Process: " << std::get<0>(processes[selectedProcess])
+                  << " (Max Response Ratio = " << maxResponseRatio << ")\n\n";
+    }
+
+    // Calculate averages
+    float avgTurnaroundTime = 0.0f, avgWaitingTime = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        avgTurnaroundTime += turnaroundTime[i];
+        avgWaitingTime += waitingTime[i];
+    }
+    avgTurnaroundTime /= n;
+    avgWaitingTime /= n;
+
+    // Print results
+    std::cout << "HRRN Scheduling:\n";
+    for (int i = 0; i < n; ++i) {
+        std::cout << "Process " << std::get<0>(processes[i])
+                  << ": Arrival Time = " << std::get<1>(processes[i])
+                  << ", Start Time = " << startTime[i]
+                  << ", Finish Time = " << finishTime[i]
+                  << ", Turnaround Time = " << turnaroundTime[i]
+                  << ", Waiting Time = " << waitingTime[i] << "\n";
+    }
+
+    std::cout << "\nAverage Turnaround Time: " << avgTurnaroundTime << "\n";
+    std::cout << "Average Waiting Time: " << avgWaitingTime << "\n";
+}
+
+
 
 
 int main() {
@@ -253,16 +330,18 @@ int main() {
     printInput(operation, algorithms, lastInstant, processCount, processes);
 
 
-    // Call the FCFS algorithm
-    // fcfs(processes);
+    
 
      // If Round-Robin algorithm is selected
     for (const auto& algo : algorithms) {
-        // if (algo.first == 1) { // Assuming '1' corresponds to fcfs
-        //     fcfs(processes);
-        // }
+        if (algo.first == 1) { // Assuming '1' corresponds to fcfs
+            fcfs(processes);
+        }
         if (algo.first == 2) { // Assuming '2' corresponds to Round-Robin
             roundRobin(processes, algo.second);
+        }
+        if (algo.first == 5) { // Assuming '5' corresponds to hrrn
+            hrrn(processes);
         }
     }
 

@@ -6,11 +6,11 @@
 
 -FCFS (First Come First Serve) done
 
--RR (Round Robin)
+-RR (Round Robin) 'done'
 
 `Complex Algorithms`:
 
--HRRN (Highest Response Ratio Next)
+-HRRN (Highest Response Ratio Next) 'done'
 
 -Aging
 
