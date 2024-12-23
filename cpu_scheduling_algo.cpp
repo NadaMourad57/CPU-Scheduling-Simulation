@@ -5,7 +5,9 @@
 #include <tuple>
 #include <utility>
 #include <algorithm>
+#include<queue>
 using namespace std;
+
 
 // Function to parse the input
 void parseInput(
@@ -143,6 +145,104 @@ void fcfs(const std::vector<std::tuple<std::string, int, int>>& processes) {
     cout << "Average Waiting Time: " << avgWaitingTime << endl;
 }
 
+void roundRobin(const vector<tuple<string, int, int>>& processes, int quantum) {
+    int n = processes.size();
+    
+    // Ensure variables are cleared before every run
+    vector<int> remainingServiceTime(n);
+    vector<int> startTime(n, -1), finishTime(n), turnaroundTime(n), waitingTime(n);
+    queue<int> readyQueue;
+    
+    // Initialize remaining service times
+    for (int i = 0; i < n; ++i) {
+        remainingServiceTime[i] = get<2>(processes[i]);
+    }
+    
+    // If quantum is invalid, print error and return
+    if (quantum <= 0) {
+        std::cerr << "Error: Invalid quantum value: " << quantum << "\n";
+        return;
+    }
+
+    // Sort processes based on arrival time
+    vector<tuple<string, int, int>> sortedProcesses = processes;
+    sort(sortedProcesses.begin(), sortedProcesses.end(), [](auto& a, auto& b) {
+        return get<1>(a) < get<1>(b);
+    });
+    
+    int currentTime = 0, i = 0;
+    
+    // Process execution loop
+    while (i < n || !readyQueue.empty()) {
+        // Add all processes that have arrived to the queue
+        while (i < n && get<1>(sortedProcesses[i]) <= currentTime) {
+            readyQueue.push(i);
+            ++i;
+        }
+        
+        // If queue is empty, jump to next arrival time
+        if (readyQueue.empty()) {
+            if (i < n) {
+                currentTime = get<1>(sortedProcesses[i]);
+            }
+            continue;
+        }
+        
+        // Process next in queue
+        int idx = readyQueue.front();
+        readyQueue.pop();
+        
+        // Execute process for its quantum or until completion
+        int timeSlice = min(quantum, remainingServiceTime[idx]);
+        remainingServiceTime[idx] -= timeSlice;
+        currentTime += timeSlice;
+        
+        // Update start time if this is the first time the process is being executed
+        if (startTime[idx] == -1) {
+            startTime[idx] = currentTime - timeSlice;  // First time execution, set start time
+        }
+        
+        // If process finishes, update finish time, turnaround time, and waiting time
+        if (remainingServiceTime[idx] == 0) {
+            finishTime[idx] = currentTime;
+            turnaroundTime[idx] = finishTime[idx] - get<1>(sortedProcesses[idx]);
+            waitingTime[idx] = turnaroundTime[idx] - get<2>(sortedProcesses[idx]);
+        }
+        
+        // If process is not done, put it back in the queue
+        if (remainingServiceTime[idx] > 0) {
+            readyQueue.push(idx);
+        }
+    }
+    
+    // Compute average turnaround time and waiting time
+    float avgTurnaroundTime = 0.0f, avgWaitingTime = 0.0f;
+    for (int i = 0; i < n; ++i) {
+        avgTurnaroundTime += turnaroundTime[i];
+        avgWaitingTime += waitingTime[i];
+    }
+    
+    avgTurnaroundTime /= n;
+    avgWaitingTime /= n;
+    
+    // Output the results
+    cout << "Round Robin Scheduling (Quantum = " << quantum << "):\n";
+    for (int i = 0; i < n; ++i) {
+        cout << "Process " << get<0>(sortedProcesses[i]) 
+             << ": Arrival Time = " << get<1>(sortedProcesses[i]) 
+             << ", Start Time = " << startTime[i] 
+             << ", Finish Time = " << finishTime[i] 
+             << ", Turnaround Time = " << turnaroundTime[i] 
+             << ", Waiting Time = " << waitingTime[i] << endl;
+    }
+    
+    cout << "\nAverage Turnaround Time: " << avgTurnaroundTime << endl;
+    cout << "Average Waiting Time: " << avgWaitingTime << endl;
+}
+
+
+
+
 int main() {
     std::string operation;
     std::vector<std::pair<int, int>> algorithms; // {algorithm_id, quantum (-1 if not applicable)}
@@ -154,7 +254,17 @@ int main() {
 
 
     // Call the FCFS algorithm
-    fcfs(processes);
+    // fcfs(processes);
+
+     // If Round-Robin algorithm is selected
+    for (const auto& algo : algorithms) {
+        // if (algo.first == 1) { // Assuming '1' corresponds to fcfs
+        //     fcfs(processes);
+        // }
+        if (algo.first == 2) { // Assuming '2' corresponds to Round-Robin
+            roundRobin(processes, algo.second);
+        }
+    }
 
     return 0;
 }
