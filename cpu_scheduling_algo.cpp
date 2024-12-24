@@ -158,7 +158,7 @@ std::vector<std::string>  fcfs(const vector<tuple<string, int, int>>& processes)
     return timeline;
 }
 
-std::vector<std::string> roundRobin(const vector<tuple<string, int, int>>& processes, int quantum) {
+std::vector<std::string> roundRobin(const vector<tuple<string, int, int>>& processes, int quantum, int lastInstant) {
     int n = processes.size();
     
     // Ensure variables are cleared before every run
@@ -190,6 +190,11 @@ std::vector<std::string> roundRobin(const vector<tuple<string, int, int>>& proce
     
     // Process execution loop
     while (i < n || !readyQueue.empty()) {
+        // If the current time exceeds lastInstant, stop scheduling
+        if (currentTime > lastInstant) {
+            break;
+        }
+
         // Add all processes that have arrived to the queue
         while (i < n && get<1>(sortedProcesses[i]) <= currentTime) {
             readyQueue.push(i);
@@ -199,7 +204,7 @@ std::vector<std::string> roundRobin(const vector<tuple<string, int, int>>& proce
         // If queue is empty, jump to next arrival time and add "IDLE" slots
         if (readyQueue.empty()) {
             if (i < n) {
-                while (currentTime < get<1>(sortedProcesses[i])) {
+                while (currentTime < get<1>(sortedProcesses[i]) && currentTime <= lastInstant) {
                     timeline.push_back("IDLE");
                     ++currentTime;
                 }
@@ -263,6 +268,7 @@ std::vector<std::string> roundRobin(const vector<tuple<string, int, int>>& proce
 
     return timeline;
 }
+
 
 std::vector<std::string> hrrn(std::vector<std::tuple<std::string, int, int>>& processes) {
     int n = processes.size();
@@ -375,7 +381,7 @@ int main() {
         
         }
         else if (algo.first == 2) { // Assuming '2' corresponds to Round-Robin
-            std::vector<std::string> timeSlotProcess = roundRobin(processes, algo.second);
+            std::vector<std::string> timeSlotProcess = roundRobin(processes, algo.second,lastInstant);
 
             // Print the timeSlotProcess vector
             std::cout << "\nProcess Running at Each Time Slot:\n";
