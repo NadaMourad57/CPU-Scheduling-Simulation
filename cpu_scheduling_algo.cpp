@@ -94,7 +94,7 @@ void printInput(
 //Algorithms
 // FCFS Scheduling Algorithm
 
-vector<string> fcfs(const vector<tuple<string, int, int>>& processes) {
+std::vector<std::string>  fcfs(const vector<tuple<string, int, int>>& processes) {
     int n = processes.size();
 
     // Vectors to store process details
@@ -268,8 +268,12 @@ std::vector<std::string> hrrn(std::vector<std::tuple<std::string, int, int>>& pr
     int n = processes.size();
     std::vector<bool> completed(n, false); // Track completed processes
     std::vector<int> startTime(n), finishTime(n), turnaroundTime(n), waitingTime(n);
+    std::vector<float> normTurnaroundTime(n); // Normalized Turnaround Time
     int currentTime = 0;
     std::vector<std::string> timeSlotProcess; // Vector to store process running at each time slot
+
+    // Track total turnaround and waiting times for average calculation
+    float totalTurnaroundTime = 0.0f, totalWaitingTime = 0.0f, totalNormTurnaroundTime = 0.0f;
 
     for (int completedCount = 0; completedCount < n; ++completedCount) {
         // Calculate response ratios for all ready processes
@@ -310,6 +314,9 @@ std::vector<std::string> hrrn(std::vector<std::tuple<std::string, int, int>>& pr
         turnaroundTime[selectedProcess] = finishTime[selectedProcess] - arrivalTime;
         waitingTime[selectedProcess] = turnaroundTime[selectedProcess] - serviceTime;
 
+        // Calculate normalized turnaround time
+        normTurnaroundTime[selectedProcess] = (float)turnaroundTime[selectedProcess] / (float)serviceTime;
+
         // Add process to the timeSlotProcess for each time unit it runs
         for (int t = 0; t < serviceTime; ++t) {
             timeSlotProcess.push_back(std::get<0>(processes[selectedProcess]));
@@ -318,35 +325,28 @@ std::vector<std::string> hrrn(std::vector<std::tuple<std::string, int, int>>& pr
         currentTime += serviceTime;
         completed[selectedProcess] = true;
 
+        // Update total turnaround and waiting times for averages
+        totalTurnaroundTime += turnaroundTime[selectedProcess];
+        totalWaitingTime += waitingTime[selectedProcess];
+        totalNormTurnaroundTime += normTurnaroundTime[selectedProcess];
+
         std::cout << "Selected Process: " << std::get<0>(processes[selectedProcess])
                   << " (Max Response Ratio = " << maxResponseRatio << ")\n\n";
     }
 
-    // Calculate averages
-    float avgTurnaroundTime = 0.0f, avgWaitingTime = 0.0f;
-    for (int i = 0; i < n; ++i) {
-        avgTurnaroundTime += turnaroundTime[i];
-        avgWaitingTime += waitingTime[i];
-    }
-    avgTurnaroundTime /= n;
-    avgWaitingTime /= n;
+    // Calculate average turnaround, waiting, and normalized turnaround times
+    float avgTurnaroundTime = totalTurnaroundTime / n;
+    float avgWaitingTime = totalWaitingTime / n;
+    float avgNormTurnaroundTime = totalNormTurnaroundTime / n;
 
-    // Print results
-    std::cout << "HRRN Scheduling:\n";
-    for (int i = 0; i < n; ++i) {
-        std::cout << "Process " << std::get<0>(processes[i])
-                  << ": Arrival Time = " << std::get<1>(processes[i])
-                  << ", Start Time = " << startTime[i]
-                  << ", Finish Time = " << finishTime[i]
-                  << ", Turnaround Time = " << turnaroundTime[i]
-                  << ", Waiting Time = " << waitingTime[i] << "\n";
-    }
 
-    std::cout << "\nAverage Turnaround Time: " << avgTurnaroundTime << "\n";
-    std::cout << "Average Waiting Time: " << avgWaitingTime << "\n";
+    cout << "\nAverage Turnaround Time: " << avgTurnaroundTime << endl;
+    cout << "Average Waiting Time: " << avgWaitingTime << endl;
+    cout << "Average Norm Turnaround Time: " << avgNormTurnaroundTime << endl;
 
     return timeSlotProcess; // Return the time slot process history
 }
+
 
 
 
