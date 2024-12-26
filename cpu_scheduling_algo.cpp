@@ -90,10 +90,32 @@ void printInput(
 }
 
 
-//Algorithms
-// FCFS Scheduling Algorithm
-// FCFS Scheduling implementation
-void fcfs(const std::vector<std::tuple<std::string, int, int>>& processes) {
+
+
+void SPN( std::vector<std::tuple<std::string, int, int>>& processes){
+    int n=processes.size();
+    //sort process by shortest period
+     std::sort(processes.begin(), processes.end(),
+              [](const std::tuple<std::string, int, int>& a, const std::tuple<std::string, int, int>& b) {
+                  return (std::get<2>(a) < std::get<2>(b));
+              });
+std::cout << "Sorted processes:\n";
+    for (const std::tuple<std::string, int, int>& process : processes) {
+        std::cout << "Process " << std::get<0>(process)
+                  << ": Start = " << std::get<1>(process)
+                    << ", Service Time = " << std::get<2>(process)
+                  << '\n';
+
+}
+}
+
+void SRT(std::vector<std::tuple<std::string, int, int>>& processes){
+
+}
+
+
+
+void fcfs( std::vector<std::tuple<std::string, int, int>>& processes) {
     int n = processes.size();
 
     // Vectors to store process details
@@ -101,7 +123,7 @@ void fcfs(const std::vector<std::tuple<std::string, int, int>>& processes) {
 
     // Sorting by Arrival Time (if not already sorted)
     vector<tuple<string, int, int>> sortedProcesses = processes;
-    sort(sortedProcesses.begin(), sortedProcesses.end(), [](auto& a, auto& b) {
+    sort(sortedProcesses.begin(), sortedProcesses.end(), [](const tuple<string, int, int>& a, const tuple<string, int, int>& b) {
         return get<1>(a) < get<1>(b);
     });
 
@@ -327,8 +349,15 @@ int main() {
     std::vector<std::tuple<std::string, int, int>> processes; // {name, arrival_time, service_time}
 
     parseInput(operation, algorithms, lastInstant, processCount, processes);
-    printInput(operation, algorithms, lastInstant, processCount, processes);
-
+    // printInput(operation, algorithms, lastInstant, processCount, processes);
+    printf("Input:\n");
+    printf("Operation: %s\n", operation.c_str());
+    printf("Last Instant: %d\n", lastInstant);
+    printf("Process Count: %d\n", processCount);
+    for (int i = 0; i < processes.size(); i++) {
+        printf("Process %d: %s, %d, %d\n", i, std::get<0>(processes[i]).c_str(), std::get<1>(processes[i]), std::get<2>(processes[i]));
+    }
+    SPN(processes);
 
     
 
