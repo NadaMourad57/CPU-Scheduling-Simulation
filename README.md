@@ -14,6 +14,21 @@ This program simulates and visualizes CPU scheduling algorithms. The implemented
 7. FB-2i (Feedback where all queues have q=2i)
 8. Aging
 
+
+
+
+##### 6. FB-1 (Feedback where all queues have q=1)
+- create priority queues vector as many as the max service time
+- arrange processes by arrival time 
+- for process in processes, first check if the arrival time=current time
+- add to ready queue 1
+- if queue i is not empty pop from ready queue and add to output reduce service time by 1
+- if remaining service time of process = 0 remove from processes
+- else push in next priority queue i+1
+
+
+
+
 The program supports two modes:
 - **Trace**: Visualizes process activity on the CPU timeline.
 
@@ -196,5 +211,9 @@ make
 ./CPU-Scheduling-Simulation < ../testcases/01a-input.txt
 ```
 
+**to run main.cpp**
+```plaintext
+g++ -std=c++11 -o main main.cpp
+./main <testcases/05a-input.txt 
 
-
+```
