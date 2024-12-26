@@ -6,6 +6,7 @@
 #include <queue>
 #include <iomanip>
 #include <stdio.h>
+#include <math.h>
 
 struct process {
     std::string name;
@@ -167,6 +168,58 @@ std::vector<std::string> fcfs(std::vector<process>& processes, std::vector<std::
 }
 
 //------------------------------------------------------------------------------------------------------------------------//
+//Round Robin
+std::vector<std::string> RR(std::vector<process>& processes, std::vector<std::string>& output, int quantum) {
+    int n = processes.size();
+    std::queue<int> ready_queue; // Queue to hold process indices
+    int currentTime = 0;
+    int j = 0; // Index for processes
+
+    // Loop until all processes are completed
+    while (true) {
+        // Add processes to the queue that have arrived
+        while (j < n && processes[j].arrival_time <= currentTime) {
+            ready_queue.push(j);
+            j++;
+        }
+
+        // If the queue is empty, we need to wait for the next process
+        if (ready_queue.empty()) {
+            if (j >= n) break; // All processes have been added
+            output.push_back("-"); // Idle time
+            currentTime++;
+            continue;
+        }
+
+        // Get the next process from the queue
+        int processIndex = ready_queue.front();
+        ready_queue.pop();
+
+        // Execute for the quantum or until the process finishes
+        int timeSlice = std::min(quantum, processes[processIndex].remaining_service_time);
+        for (int i = 0; i < timeSlice; i++) {
+            output.push_back(processes[processIndex].name);
+        }
+
+        // Update the time and the remaining service time
+        currentTime += timeSlice;
+        processes[processIndex].remaining_service_time -= timeSlice;
+
+        // If the process has finished, update its metrics
+        if (processes[processIndex].remaining_service_time == 0) {
+            processes[processIndex].finish_time = currentTime;
+            processes[processIndex].turnaround_time = processes[processIndex].finish_time - processes[processIndex].arrival_time;
+            processes[processIndex].norm_turnaround_time = static_cast<float>(processes[processIndex].turnaround_time) / processes[processIndex].service_time;
+        } else {
+            // If the process is not finished, re-add it to the queue
+            ready_queue.push(processIndex);
+        }
+    }
+
+    return output;
+}
+
+//------------------------------------------------------------------------------------------------------------------------//
 //Highest Response Ratio Next
 std::vector<std::string> HRRN(std::vector<process>& processes, std::vector<std::string>& output) {
     int n = processes.size();
@@ -221,6 +274,13 @@ std::vector<std::string> HRRN(std::vector<process>& processes, std::vector<std::
     return output;
 }
 
+std::vector<std::string> aging(std::vector<process>& processes, std::vector<std::string>& output, int quantum) {
+    int current_time = 0;
+    std::vector<process> waiting_processes; // To keep track of waiting processes
+
+
+
+}
 
 
 //------------------------------------------------------------------------------------------------------------------------//
@@ -447,6 +507,9 @@ std::vector<std::string> apply_algorithm(const algorithm& algo, std::vector<proc
         case 1:
             output = fcfs(processes,output);
             break;
+        case 2:
+            output = RR(processes, output, algo.quantum);
+            break;
         case 3:
             output = SPN(processes, output);
             break;
@@ -463,6 +526,9 @@ std::vector<std::string> apply_algorithm(const algorithm& algo, std::vector<proc
             break;
         case 7:
             output = FB_2i(processes, output,total_time);
+            break;
+        case 8:
+            output = aging(processes, output, algo.quantum);
             break;
 
 

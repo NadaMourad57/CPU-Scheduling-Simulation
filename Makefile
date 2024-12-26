@@ -2,11 +2,11 @@
 TARGET = CPU-Scheduling-Simulation
 
 # Build rules
-all: cpu_scheduling_algo.o
-	g++ -o $(TARGET) cpu_scheduling_algo.o
+all: main.o
+	g++ -o $(TARGET) main.o
 
-main.o: cpu_scheduling_algo.cpp
-	g++ -c cpu_scheduling_algo.cpp
+main.o: main.cpp
+	g++ -c main.cpp
 
 # Clean up
 clean:
