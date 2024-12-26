@@ -171,14 +171,20 @@ std::vector<std::string> fcfs(std::vector<process>& processes, std::vector<std::
 //Round Robin
 std::vector<std::string> RR(std::vector<process>& processes, std::vector<std::string>& output, int quantum) {
     int n = processes.size();
+    std::vector<process> backup_processes = processes;
     std::queue<int> ready_queue; // Queue to hold process indices
     int currentTime = 0;
     int j = 0; // Index for processes
 
+    // Sort processes by arrival time
+    std::sort(backup_processes.begin(), backup_processes.end(), [](const process& a, const process& b) {
+        return a.arrival_time < b.arrival_time;
+    });
+
     // Loop until all processes are completed
     while (true) {
         // Add processes to the queue that have arrived
-        while (j < n && processes[j].arrival_time <= currentTime) {
+        while (j < n && backup_processes[j].arrival_time <= currentTime) {
             ready_queue.push(j);
             j++;
         }
@@ -187,7 +193,8 @@ std::vector<std::string> RR(std::vector<process>& processes, std::vector<std::st
         if (ready_queue.empty()) {
             if (j >= n) break; // All processes have been added
             output.push_back("-"); // Idle time
-            currentTime++;
+            // currentTime++;
+            currentTime = backup_processes[j].arrival_time;
             continue;
         }
 
@@ -196,20 +203,20 @@ std::vector<std::string> RR(std::vector<process>& processes, std::vector<std::st
         ready_queue.pop();
 
         // Execute for the quantum or until the process finishes
-        int timeSlice = std::min(quantum, processes[processIndex].remaining_service_time);
+        int timeSlice = std::min(quantum, backup_processes[processIndex].remaining_service_time);
         for (int i = 0; i < timeSlice; i++) {
-            output.push_back(processes[processIndex].name);
+            output.push_back(backup_processes[processIndex].name);
         }
 
         // Update the time and the remaining service time
         currentTime += timeSlice;
-        processes[processIndex].remaining_service_time -= timeSlice;
+        backup_processes[processIndex].remaining_service_time -= timeSlice;
 
         // If the process has finished, update its metrics
-        if (processes[processIndex].remaining_service_time == 0) {
-            processes[processIndex].finish_time = currentTime;
-            processes[processIndex].turnaround_time = processes[processIndex].finish_time - processes[processIndex].arrival_time;
-            processes[processIndex].norm_turnaround_time = static_cast<float>(processes[processIndex].turnaround_time) / processes[processIndex].service_time;
+        if (backup_processes[processIndex].remaining_service_time == 0) {
+            backup_processes[processIndex].finish_time = currentTime;
+            backup_processes[processIndex].turnaround_time = backup_processes[processIndex].finish_time - backup_processes[processIndex].arrival_time;
+            backup_processes[processIndex].norm_turnaround_time = static_cast<float>(backup_processes[processIndex].turnaround_time) / backup_processes[processIndex].service_time;
         } else {
             // If the process is not finished, re-add it to the queue
             ready_queue.push(processIndex);
@@ -274,12 +281,46 @@ std::vector<std::string> HRRN(std::vector<process>& processes, std::vector<std::
     return output;
 }
 
+//------------------------------------------------------------------------------------------------------------------------//
+//Aging
+
 std::vector<std::string> aging(std::vector<process>& processes, std::vector<std::string>& output, int quantum) {
-    int current_time = 0;
-    std::vector<process> waiting_processes; // To keep track of waiting processes
+    int current_time = -1;
+    std::vector<process> backup_processes = processes;
+    std::vector<char> timeline;
+    
+    // Loop until all processes are complete
+    while (true) {
+        bool all_complete = true;
 
+        // Apply aging to all processes: increase priority (reduce remaining service time) for waiting processes
+        for (auto& process : backup_processes) {
+            if (process.service_time > 0 && process.arrival_time <= current_time) {
+                all_complete = false;
+                process.service_time += 1;  // Aging: increase priority of the process
+            }
+        }
 
+        if (all_complete) {
+            break;  // Exit loop if all processes are completed
+        }
 
+        // Find the process with the highest priority 
+        auto highest_priority_process = std::max_element(
+            backup_processes.begin(), backup_processes.end(),
+            [](const process& a, const process& b) {
+                if (a.service_time == 0) return true;  
+                if (b.service_time == 0) return false;
+                return a.service_time > b.service_time;  
+            });
+
+        
+    }
+
+    // Update the output with the timeline
+    output.push_back(std::string(timeline.begin(), timeline.end()));
+
+    return output;
 }
 
 
