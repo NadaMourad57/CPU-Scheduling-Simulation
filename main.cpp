@@ -118,6 +118,65 @@ void outputTrace(const std::vector<process>& processes, const std::vector<std::s
     }
     std::cout << "------------------------------------------------\n";
 }
+
+void outputStats(const std::vector<process>& processes, const std::string& algoName) {
+    int n = processes.size();
+    float meanTurnaround = 0.0, meanNormTurnaround = 0.0;
+
+    // Calculate means
+    for (const auto& p : processes) {
+        meanTurnaround += p.turnaround_time;
+        meanNormTurnaround += p.norm_turnaround_time;
+    }
+    meanTurnaround /= n;
+    meanNormTurnaround /= n;
+
+    // Display table header
+    std::cout << "\n";
+    std::cout << "Process     |  ";
+    for (const auto& p : processes) {
+        std::cout << std::setw(3) << p.name << " |  ";
+    }
+    std::cout << "\n";
+
+    // Display arrival times
+    std::cout << "Arrival     |  ";
+    for (const auto& p : processes) {
+        std::cout << std::setw(3) << p.arrival_time << " |  ";
+    }
+    std::cout << "\n";
+
+    // Display service times
+    std::cout << "Service     |  ";
+    for (const auto& p : processes) {
+        std::cout << std::setw(3) << p.service_time << " |  ";
+    }
+    std::cout << "Mean|\n";
+
+    // Display finish times
+    std::cout << "Finish      |  ";
+    for (const auto& p : processes) {
+        std::cout << std::setw(3) << p.finish_time << " |  ";
+    }
+    std::cout << "----|\n";
+
+    // Display turnaround times
+    std::cout << "Turnaround  |  ";
+    for (const auto& p : processes) {
+        std::cout << std::setw(3) << p.turnaround_time << " |  ";
+    }
+    std::cout << std::fixed << std::setprecision(2) << meanTurnaround << "|\n";
+
+    // Display normalized turnaround times
+    std::cout << "NormTurn    |  ";
+    for (const auto& p : processes) {
+        std::cout << std::setw(4) << std::fixed << std::setprecision(2) << p.norm_turnaround_time << "|  ";
+    }
+    std::cout << meanNormTurnaround << "| \n";
+}
+
+
+
 struct CompareServiceTime {
     bool operator()(const process& a, const process& b) {
         return a.service_time > b.service_time;
@@ -158,7 +217,8 @@ std::vector<std::string> fcfs(std::vector<process>& processes, std::vector<std::
             output.push_back(processes[i].name); 
         }
 
-        processes[i].finish_time = currentTime + processes[i].service_time;
+        processes[i].finish_time = std::max(currentTime, processes[i].arrival_time) + processes[i].service_time;
+
         processes[i].turnaround_time = processes[i].finish_time - processes[i].arrival_time;
         processes[i].norm_turnaround_time =
             static_cast<float>(processes[i].turnaround_time) / processes[i].service_time;
@@ -632,7 +692,15 @@ int main() {
 
         std::cout << std::left;
         std::cout << std::setw(6) << algoName;
-        outputTrace(processes, output); 
+        // outputTrace(processes, output); 
+
+        if (operation == "trace") {
+            outputTrace(processes, output);
+        } else if (operation == "stats") {
+            outputStats(processes, algoName);
+        } else {
+            std::cerr << "Invalid operation. Use 'trace' or 'stats'.\n";
+        }
     }
 
     return 0;
