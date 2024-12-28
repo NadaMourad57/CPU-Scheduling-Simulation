@@ -92,6 +92,44 @@ void updateFinishTimes(std::vector<process>& processes, const std::vector<std::s
     }
 }
 
+//Adding Metric Calculation
+void calculateArrivalTimes(std::vector<process>& processes, const std::vector<std::string>& timeline) {
+    for (auto& p : processes) {
+        auto it = std::find(timeline.begin(), timeline.end(), p.name);
+        if (it != timeline.end()) {
+            p.arrival_time = std::distance(timeline.begin(), it);
+        }
+    }
+}
+
+void calculateServiceTimes(std::vector<process>& processes, const std::vector<std::string>& timeline) {
+    for (auto& p : processes) {
+        p.service_time = std::count(timeline.begin(), timeline.end(), p.name);
+    }
+}
+
+void calculateFinishTimes(std::vector<process>& processes, const std::vector<std::string>& timeline) {
+    for (auto& p : processes) {
+        auto it = std::find(timeline.rbegin(), timeline.rend(), p.name);
+        if (it != timeline.rend()) {
+            p.finish_time = std::distance(timeline.begin(), it.base()) - 1;
+        }
+    }
+}
+
+void calculateTurnaroundTimes(std::vector<process>& processes) {
+    for (auto& p : processes) {
+        p.turnaround_time = p.finish_time - p.arrival_time;
+    }
+}
+
+void calculateNormTurnaroundTimes(std::vector<process>& processes) {
+    for (auto& p : processes) {
+        p.norm_turnaround_time = static_cast<float>(p.turnaround_time) / p.service_time;
+    }
+}
+
+
 
 void outputTrace(const std::vector<process>& processes, const std::vector<std::string>& output) {
     int timelineLength = output.size();
@@ -120,6 +158,7 @@ void outputTrace(const std::vector<process>& processes, const std::vector<std::s
 }
 
 void outputStats(const std::vector<process>& processes, const std::string& algoName) {
+    
     int n = processes.size();
     float meanTurnaround = 0.0, meanNormTurnaround = 0.0;
 
@@ -244,7 +283,7 @@ std::vector<std::string> RR(std::vector<process>& processes, std::vector<std::st
     // Loop until all processes are completed
     while (true) {
         // Add processes to the queue that have arrived
-        while (j < n && backup_processes[j].arrival_time <= currentTime) {
+        while (j < n && backup_processes[j].arrival_time <= 0) {
             ready_queue.push(j);
             j++;
         }
@@ -257,6 +296,8 @@ std::vector<std::string> RR(std::vector<process>& processes, std::vector<std::st
             currentTime = backup_processes[j].arrival_time;
             continue;
         }
+
+        
 
         // Get the next process from the queue
         int processIndex = ready_queue.front();
