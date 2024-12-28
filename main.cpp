@@ -129,8 +129,7 @@ void outputTrace( std::vector<process>& processes,  std::vector<std::string>& ou
     std::cout << "------------------------------------------------";
 }
 void outputStats(const std::vector<process>& processes, const std::string& algoName) {
-    std::cout << std::left;
-    std::cout << std::setw(4) << algoName << "\n";
+    std::cout << algoName << "\n";
     int n = processes.size();
     float meanTurnaround = 0.0, meanNormTurnaround = 0.0;
 
@@ -141,50 +140,65 @@ void outputStats(const std::vector<process>& processes, const std::string& algoN
     meanTurnaround /= n;
     meanNormTurnaround /= n;
 
+    // Helper function to format aligned numbers
+    auto alignINT = [](int value) -> std::string {
+        if (value < 10)
+            return "  " + std::to_string(value); // Single-digit numbers with extra spaces
+        else
+            return " " + std::to_string(value);  // Double-digit numbers with fewer spaces
+    };
+
+    // Helper function to align floating-point numbers
+    auto alignFloat = [](double value, int width = 5) -> std::string {
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2) << value;
+        std::string str = oss.str();
+        return std::string(width - str.length(), ' ') + str;
+    };
+
     // Display table header
-    std::cout << std::setw(11) << "Process" << "|";
+    std::cout << "Process    |";
     for (const auto& p : processes) {
-        std::cout << "  " << std::setw(3) << p.name << "|";
+        std::cout << std::setw(3) << p.name << "  |";
     }
     std::cout << "\n";
 
     // Display arrival times
-    std::cout << std::setw(11) << "Arrival" << "|";
+    std::cout << "Arrival    |";
     for (const auto& p : processes) {
-        std::cout << "  " << std::setw(3) << p.arrival_time << "|";
+        std::cout << alignINT(p.arrival_time) << "  |";
     }
     std::cout << "\n";
 
     // Display service times
-    std::cout << std::setw(11) << "Service" << "|";
+    std::cout << "Service    |";
     for (const auto& p : processes) {
-        std::cout << "  " << std::setw(3) << p.service_time << "|";
+        std::cout << alignINT(p.service_time) << "  |";
     }
     std::cout << " Mean|\n";
 
     // Display finish times
-    std::cout << std::left;
-
-    std::cout << std::setw(11) << "Finish" << "|";
+    std::cout << "Finish     |";
     for (const auto& p : processes) {
-        std::cout << "  " << std::setw(3) << p.finish_time << "|";
+        std::cout << alignINT(p.finish_time) << "  |";
     }
     std::cout << "-----|\n";
 
     // Display turnaround times
-    std::cout << std::setw(11) << "Turnaround" << "|";
+    std::cout << "Turnaround |";
     for (const auto& p : processes) {
-        std::cout << "  " << std::setw(3) << p.turnaround_time << "|";
+        std::cout << alignINT(p.turnaround_time) << "  |";
     }
-    std::cout << std::fixed << std::setprecision(2) << std::setw(5) << meanTurnaround << "|\n";
+    std::cout << alignFloat(meanTurnaround) << "|\n";
 
     // Display normalized turnaround times
-    std::cout << std::setw(11) << "NormTurn" << "|";
+    std::cout << "NormTurn   |";
     for (const auto& p : processes) {
-        std::cout << " " << std::setw(4) << std::fixed << std::setprecision(2) << p.norm_turnaround_time << "|";
+        std::cout << " " << alignFloat(p.norm_turnaround_time, 4) << "|";
     }
-    std::cout << " " << std::fixed << std::setprecision(2) << meanNormTurnaround << "|\n";
+    std::cout << alignFloat(meanNormTurnaround) << "|\n";
 }
+
 
 
 
