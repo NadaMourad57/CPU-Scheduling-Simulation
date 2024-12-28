@@ -11,11 +11,14 @@
 struct process {
     std::string name;
     int arrival_time;
+    int initial_priority;
+    int current_priority;
     int service_time;
     int remaining_service_time;
     int finish_time = 0;
     int turnaround_time = 0;
     float norm_turnaround_time = 0.0;
+    bool in_queue = false;
 };
 
 struct algorithm {
@@ -79,6 +82,8 @@ void parseInput(
         proc.arrival_time = arrivalTime;
         proc.service_time = serviceTime;
         proc.remaining_service_time = serviceTime;
+        proc.initial_priority = serviceTime;
+        proc.current_priority = serviceTime;
         processes.push_back(proc);
     }
 }
@@ -93,7 +98,7 @@ void updateFinishTimes(std::vector<process>& processes, const std::vector<std::s
 }
 
 
-void outputTrace(const std::vector<process>& processes, const std::vector<std::string>& output, const std::string& algoName) {
+void outputTrace( std::vector<process>& processes,  std::vector<std::string>& output,  std::string& algoName) {
     std::cout << std::left;
     std::cout << std::setw(6) << algoName;
     int timelineLength = output.size();
@@ -104,7 +109,10 @@ void outputTrace(const std::vector<process>& processes, const std::vector<std::s
     std::cout << "\n------------------------------------------------\n";
 
     // Print each process timeline
-    for (const auto& process : processes) {
+    for ( auto& process : processes) {
+        if (algoName=="Aging"){
+            process.finish_time=timelineLength;
+        }
         std::cout << std::setw(6) <<process.name << "|";
         for (int i = 0; i < timelineLength; ++i) {
             if (output[i] == process.name) {
@@ -183,6 +191,12 @@ void outputStats(const std::vector<process>& processes, const std::string& algoN
 struct CompareServiceTime {
     bool operator()(const process& a, const process& b) {
         return a.service_time > b.service_time;
+    }
+};
+
+struct ComparePriority {
+    bool operator()(const process& a, const process& b) {
+        return a.current_priority > b.current_priority;
     }
 };
 
@@ -358,66 +372,66 @@ std::vector<std::string> HRRN(std::vector<process>& processes, std::vector<std::
 //------------------------------------------------------------------------------------------------------------------------//
 //Aging
 
-std::vector<std::string> aging(std::vector<process>& processes, std::vector<std::string>& output, int quantum) {
+std::vector<std::string> aging(std::vector<process>& processes, int total_time, int quantum, std::vector<std::string>& output) {
     int current_time = 0;
-    int n = processes.size();
+    std::vector<process*> ready_queue;
 
-    // Initialize priorities (index corresponds to process index in the vector)
-    std::vector<int> priority(n, 0);
-
-    // Sort processes by arrival time initially
     std::sort(processes.begin(), processes.end(), [](const process& a, const process& b) {
         return a.arrival_time < b.arrival_time;
     });
 
-    std::vector<int> ready_queue; // Store indices of processes in the ready queue
-
-    while (current_time < quantum) {
-        // Add processes to the ready queue based on their arrival time
-        for (int i = 0; i < n; ++i) {
-            if (processes[i].arrival_time <= current_time && processes[i].remaining_service_time > 0 &&
-                std::find(ready_queue.begin(), ready_queue.end(), i) == ready_queue.end()) {
-                ready_queue.push_back(i);
+    while (current_time <total_time) {
+        // Add processes that have arrived to the ready queue
+        for (auto& process : processes) {
+            if (process.arrival_time <= current_time && !process.in_queue) {
+                process.current_priority= process.initial_priority+1;
+                process.in_queue = true;
+                ready_queue.push_back(&process);
             }
         }
 
-        // Apply aging: Increase priority for waiting processes
-        for (int idx : ready_queue) {
-            priority[idx]++;
-        }
-
-        // Select the process with the highest priority
-        if (!ready_queue.empty()) {
-            auto highest_priority_process = std::max_element(
-                ready_queue.begin(), ready_queue.end(),
-                [&priority](int a, int b) {
-                    return priority[a] < priority[b];
-                });
-
-            int selected_idx = *highest_priority_process;
-
-            // Execute the selected process for one time unit
-            output.push_back(processes[selected_idx].name);
-            processes[selected_idx].remaining_service_time--;
-            current_time++;
-
-            // If the process is finished, remove it from the ready queue
-            if (processes[selected_idx].remaining_service_time == 0) {
-                processes[selected_idx].finish_time = current_time;
-                ready_queue.erase(highest_priority_process);
-            }
-        } else {
-            // If no process is ready, CPU is idle
+        if (ready_queue.empty()) {
             output.push_back("-");
             current_time++;
+            continue;
         }
-    }
+        else{
 
+         auto highest_priority_process = std::max_element(ready_queue.begin(), ready_queue.end(),
+            [](const process* a, const process* b) {
+                return a->current_priority < b->current_priority || (a->current_priority == b->current_priority && a->arrival_time < b->arrival_time);
+            });
+
+        process* current_process = *highest_priority_process;
+        ready_queue.erase(highest_priority_process);
+
+        // Execute the process for the quantum
+        for (int i = 0; i < quantum; ++i) {
+            output.push_back(current_process->name);
+            for (auto& process : processes) {
+                if (process.arrival_time <= current_time && !process.in_queue) {
+                    process.in_queue = true;
+                    process.current_priority = process.initial_priority + 1;
+                    ready_queue.push_back(&process);
+                }
+            }
+
+            for (auto& process : ready_queue) {
+                process->current_priority++;
+            }
+
+            if (current_time > total_time) {
+                break;
+            }
+            current_time++;
+        }
+        current_process->current_priority = current_process->initial_priority;
+        ready_queue.push_back(current_process);
+    }
+    }
 
     return output;
 }
-
-
 
 //------------------------------------------------------------------------------------------------------------------------//
 //Shortest Process Next
@@ -680,7 +694,7 @@ std::vector<std::string> apply_algorithm(const algorithm& algo, std::vector<proc
             output = FB_2i(processes, output,total_time);
             break;
         case 8:
-            output = aging(processes, output, algo.quantum);
+            output = aging(processes, total_time, algo.quantum, output);
             break;
 
 
@@ -731,13 +745,13 @@ int main() {
                 algoName = "FB-2i";
                 break;
             case 8:
-                algoName = "aging";
+                algoName = "Aging";
                 break;
             default:
                 algoName = "Unknown";
                 break;
         }
-        if (algo.quantum>=0) {
+        if (algoName == "RR") {
             algoName = algoName + "-" + std::to_string(algo.quantum);
         }
         // printf("lastInstant: %d\n", lastInstant);
