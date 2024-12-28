@@ -359,43 +359,64 @@ std::vector<std::string> HRRN(std::vector<process>& processes, std::vector<std::
 //Aging
 
 std::vector<std::string> aging(std::vector<process>& processes, std::vector<std::string>& output, int quantum) {
-    int current_time = -1;
-    std::vector<process> backup_processes = processes;
-    std::vector<char> timeline;
-    
-    // Loop until all processes are complete
-    while (true) {
-        bool all_complete = true;
+    int current_time = 0;
+    int n = processes.size();
 
-        // Apply aging to all processes: increase priority (reduce remaining service time) for waiting processes
-        for (auto& process : backup_processes) {
-            if (process.service_time > 0 && process.arrival_time <= current_time) {
-                all_complete = false;
-                process.service_time += 1;  // Aging: increase priority of the process
+    // Initialize priorities (index corresponds to process index in the vector)
+    std::vector<int> priority(n, 0);
+
+    // Sort processes by arrival time initially
+    std::sort(processes.begin(), processes.end(), [](const process& a, const process& b) {
+        return a.arrival_time < b.arrival_time;
+    });
+
+    std::vector<int> ready_queue; // Store indices of processes in the ready queue
+
+    while (current_time < quantum) {
+        // Add processes to the ready queue based on their arrival time
+        for (int i = 0; i < n; ++i) {
+            if (processes[i].arrival_time <= current_time && processes[i].remaining_service_time > 0 &&
+                std::find(ready_queue.begin(), ready_queue.end(), i) == ready_queue.end()) {
+                ready_queue.push_back(i);
             }
         }
 
-        if (all_complete) {
-            break;  // Exit loop if all processes are completed
+        // Apply aging: Increase priority for waiting processes
+        for (int idx : ready_queue) {
+            priority[idx]++;
         }
 
-        // Find the process with the highest priority 
-        auto highest_priority_process = std::max_element(
-            backup_processes.begin(), backup_processes.end(),
-            [](const process& a, const process& b) {
-                if (a.service_time == 0) return true;  
-                if (b.service_time == 0) return false;
-                return a.service_time > b.service_time;  
-            });
+        // Select the process with the highest priority
+        if (!ready_queue.empty()) {
+            auto highest_priority_process = std::max_element(
+                ready_queue.begin(), ready_queue.end(),
+                [&priority](int a, int b) {
+                    return priority[a] < priority[b];
+                });
 
-        
+            int selected_idx = *highest_priority_process;
+
+            // Execute the selected process for one time unit
+            output.push_back(processes[selected_idx].name);
+            processes[selected_idx].remaining_service_time--;
+            current_time++;
+
+            // If the process is finished, remove it from the ready queue
+            if (processes[selected_idx].remaining_service_time == 0) {
+                processes[selected_idx].finish_time = current_time;
+                ready_queue.erase(highest_priority_process);
+            }
+        } else {
+            // If no process is ready, CPU is idle
+            output.push_back("-");
+            current_time++;
+        }
     }
 
-    // Update the output with the timeline
-    output.push_back(std::string(timeline.begin(), timeline.end()));
 
     return output;
 }
+
 
 
 //------------------------------------------------------------------------------------------------------------------------//
