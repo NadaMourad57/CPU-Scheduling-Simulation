@@ -20,7 +20,7 @@ struct process {
 
 struct algorithm {
     int algorithm_id;
-    int quantum;
+    int quantum=-1;
 };
 
 //------------------------------------------------------------------------------------------------------------------------//
@@ -93,7 +93,9 @@ void updateFinishTimes(std::vector<process>& processes, const std::vector<std::s
 }
 
 
-void outputTrace(const std::vector<process>& processes, const std::vector<std::string>& output) {
+void outputTrace(const std::vector<process>& processes, const std::vector<std::string>& output, const std::string& algoName) {
+    std::cout << std::left;
+    std::cout << std::setw(6) << algoName;
     int timelineLength = output.size();
 
     for (int i = 0; i <= timelineLength; ++i) {
@@ -116,14 +118,14 @@ void outputTrace(const std::vector<process>& processes, const std::vector<std::s
         std::cout << " ";
         std::cout << "\n";
     }
-    std::cout << "------------------------------------------------\n";
+    std::cout << "------------------------------------------------";
 }
-
 void outputStats(const std::vector<process>& processes, const std::string& algoName) {
+    std::cout << std::left;
+    std::cout << std::setw(4) << algoName << "\n";
     int n = processes.size();
     float meanTurnaround = 0.0, meanNormTurnaround = 0.0;
 
-    // Calculate means
     for (const auto& p : processes) {
         meanTurnaround += p.turnaround_time;
         meanNormTurnaround += p.norm_turnaround_time;
@@ -132,47 +134,48 @@ void outputStats(const std::vector<process>& processes, const std::string& algoN
     meanNormTurnaround /= n;
 
     // Display table header
-    std::cout << "\n";
-    std::cout << "Process     |  ";
+    std::cout << std::setw(11) << "Process" << "|";
     for (const auto& p : processes) {
-        std::cout << std::setw(3) << p.name << " |  ";
+        std::cout << "  " << std::setw(3) << p.name << "|";
     }
     std::cout << "\n";
 
     // Display arrival times
-    std::cout << "Arrival     |  ";
+    std::cout << std::setw(11) << "Arrival" << "|";
     for (const auto& p : processes) {
-        std::cout << std::setw(3) << p.arrival_time << " |  ";
+        std::cout << "  " << std::setw(3) << p.arrival_time << "|";
     }
     std::cout << "\n";
 
     // Display service times
-    std::cout << "Service     |  ";
+    std::cout << std::setw(11) << "Service" << "|";
     for (const auto& p : processes) {
-        std::cout << std::setw(3) << p.service_time << " |  ";
+        std::cout << "  " << std::setw(3) << p.service_time << "|";
     }
-    std::cout << "Mean|\n";
+    std::cout << " Mean|\n";
 
     // Display finish times
-    std::cout << "Finish      |  ";
+    std::cout << std::left;
+
+    std::cout << std::setw(11) << "Finish" << "|";
     for (const auto& p : processes) {
-        std::cout << std::setw(3) << p.finish_time << " |  ";
+        std::cout << "  " << std::setw(3) << p.finish_time << "|";
     }
-    std::cout << "----|\n";
+    std::cout << "-----|\n";
 
     // Display turnaround times
-    std::cout << "Turnaround  |  ";
+    std::cout << std::setw(11) << "Turnaround" << "|";
     for (const auto& p : processes) {
-        std::cout << std::setw(3) << p.turnaround_time << " |  ";
+        std::cout << "  " << std::setw(3) << p.turnaround_time << "|";
     }
-    std::cout << std::fixed << std::setprecision(2) << meanTurnaround << "|\n";
+    std::cout << std::fixed << std::setprecision(2) << std::setw(5) << meanTurnaround << "|\n";
 
     // Display normalized turnaround times
-    std::cout << "NormTurn    |  ";
+    std::cout << std::setw(11) << "NormTurn" << "|";
     for (const auto& p : processes) {
-        std::cout << std::setw(4) << std::fixed << std::setprecision(2) << p.norm_turnaround_time << "|  ";
+        std::cout << " " << std::setw(4) << std::fixed << std::setprecision(2) << p.norm_turnaround_time << "|";
     }
-    std::cout << meanNormTurnaround << "| \n";
+    std::cout << " " << std::fixed << std::setprecision(2) << meanNormTurnaround << "|\n";
 }
 
 
@@ -194,6 +197,26 @@ void printProcess(std::vector<process>& processes) {
         // printf("Normalized Turnaround Time: %f\n", processes[i].norm_turnaround_time);
     }
 }
+
+void calculateStatsFromOutput(const std::vector<std::string>& output, std::vector<process>& processes) {
+    for (auto& p : processes) {
+        // Find the first and last occurrences of the process in the output
+        auto first_it = std::find(output.begin(), output.end(), p.name);
+        auto last_it = std::find(output.rbegin(), output.rend(), p.name);
+
+        if (first_it != output.end()) {
+            int first_index = std::distance(output.begin(), first_it);
+            int last_index = std::distance(output.begin(), last_it.base()) - 1;
+
+            // Calculate finish time, turnaround time, and normalized turnaround time
+            p.finish_time = last_index + 1;  // Finish time is the last occurrence + 1
+            p.turnaround_time = p.finish_time - p.arrival_time;
+            p.norm_turnaround_time =
+                static_cast<float>(p.turnaround_time) / p.service_time;
+        }
+    }
+}
+
 
 
 //Algorithms
@@ -232,53 +255,44 @@ std::vector<std::string> fcfs(std::vector<process>& processes, std::vector<std::
 std::vector<std::string> RR(std::vector<process>& processes, std::vector<std::string>& output, int quantum) {
     int n = processes.size();
     std::vector<process> backup_processes = processes;
-    std::queue<int> ready_queue; // Queue to hold process indices
+    std::queue<int> ready_queue; 
     int currentTime = 0;
-    int j = 0; // Index for processes
+    int j = 0; 
+    int old_index = 0;
 
-    // Sort processes by arrival time
     std::sort(backup_processes.begin(), backup_processes.end(), [](const process& a, const process& b) {
         return a.arrival_time < b.arrival_time;
     });
 
-    // Loop until all processes are completed
     while (true) {
-        // Add processes to the queue that have arrived
         while (j < n && backup_processes[j].arrival_time <= currentTime) {
             ready_queue.push(j);
             j++;
         }
 
-        // If the queue is empty, we need to wait for the next process
         if (ready_queue.empty()) {
-            if (j >= n) break; // All processes have been added
-            output.push_back("-"); // Idle time
-            // currentTime++;
-            currentTime = backup_processes[j].arrival_time;
-            continue;
+            if (j >= n)
+                break;
         }
 
-        // Get the next process from the queue
         int processIndex = ready_queue.front();
         ready_queue.pop();
 
-        // Execute for the quantum or until the process finishes
         int timeSlice = std::min(quantum, backup_processes[processIndex].remaining_service_time);
+
         for (int i = 0; i < timeSlice; i++) {
             output.push_back(backup_processes[processIndex].name);
         }
 
-        // Update the time and the remaining service time
         currentTime += timeSlice;
         backup_processes[processIndex].remaining_service_time -= timeSlice;
 
-        // If the process has finished, update its metrics
-        if (backup_processes[processIndex].remaining_service_time == 0) {
-            backup_processes[processIndex].finish_time = currentTime;
-            backup_processes[processIndex].turnaround_time = backup_processes[processIndex].finish_time - backup_processes[processIndex].arrival_time;
-            backup_processes[processIndex].norm_turnaround_time = static_cast<float>(backup_processes[processIndex].turnaround_time) / backup_processes[processIndex].service_time;
-        } else {
-            // If the process is not finished, re-add it to the queue
+        while (j < n && backup_processes[j].arrival_time <= currentTime) {
+            ready_queue.push(j);
+            j++;
+        }
+
+        if (backup_processes[processIndex].remaining_service_time != 0) {
             ready_queue.push(processIndex);
         }
     }
@@ -463,13 +477,12 @@ std::vector<std::string> SRT(std::vector<process>& processes, std::vector<std::s
 //------------------------------------------------------------------------------------------------------------------------//
 //Feedback-1
 std::vector<std::string> FB_1(std::vector<process>& processes, std::vector<std::string>& output, int total_time) {
-    printf("FB-1\n");
-    printf("Total Time: %d\n", total_time);
-    int numberofaciveprocesses = 0; // Maximum number of queues
-    int n = processes.size(); // Maximum number of queues
+    int numberofactiveprocesses = 0; // Maximum number of queues
+    int n = processes.size();       // Total number of processes
     std::vector<process> backup_processes = processes;
     std::vector<std::queue<process>> feedback_queues(n); // Feedback queues
     int current_time = 0;
+    int process_index = 0; // Index to track processes
 
     // Sort processes by arrival time initially
     std::sort(processes.begin(), processes.end(), [](const process& a, const process& b) {
@@ -477,15 +490,14 @@ std::vector<std::string> FB_1(std::vector<process>& processes, std::vector<std::
     });
 
     while (current_time < total_time) {
-
-        while (!processes.empty() && processes[0].arrival_time <= current_time) {
-            feedback_queues[0].push(processes[0]);
-            numberofaciveprocesses++;
-
-            processes.erase(processes.begin());
+        while (process_index < n && processes[process_index].arrival_time <= current_time) {
+            feedback_queues[0].push(processes[process_index]);
+            numberofactiveprocesses++;
+            process_index++;
         }
 
         bool process_executed = false;
+
         for (int i = 0; i < n; i++) {
             if (!feedback_queues[i].empty()) {
                 process current_process = feedback_queues[i].front();
@@ -496,26 +508,34 @@ std::vector<std::string> FB_1(std::vector<process>& processes, std::vector<std::
                 current_time += 1;
                 process_executed = true;
 
+                  while (process_index < n && processes[process_index].arrival_time <= current_time) {
+            feedback_queues[0].push(processes[process_index]);
+            numberofactiveprocesses++;
+            process_index++;
+        }
+
                 if (current_process.remaining_service_time == 0) {
-                    numberofaciveprocesses--;
+                    numberofactiveprocesses--;
                     current_process.finish_time = current_time;
-                } else {
-                            if (numberofaciveprocesses == 1 &&  processes[0].arrival_time!=current_time+1) {
-                                feedback_queues[i].push(current_process);
-                            }
-                            else
-                            {
-                                if (i + 1 < n) {
-                                    feedback_queues[i + 1].push(current_process);
-                                } 
-                                else {
-                                    feedback_queues[i].push(current_process);
-                                }
-                            }
+                }
+                else {
+                    if (i==0 && numberofactiveprocesses==1)
+                    {
+                        feedback_queues[i].push(current_process);
+                    }
+
+                    else if (i + 1 < n) {
+                            feedback_queues[i + 1].push(current_process);
+                    }
+                    else {
+                            feedback_queues[i].push(current_process);
+                        }
+
                 }
                 break;
             }
         }
+
 
         if (!process_executed) {
             current_time++;
@@ -526,66 +546,78 @@ std::vector<std::string> FB_1(std::vector<process>& processes, std::vector<std::
     return output;
 }
 
+
 //------------------------------------------------------------------------------------------------------------------------//
 //Feedback-2i
 std::vector<std::string> FB_2i(std::vector<process>& processes, std::vector<std::string>& output, int total_time) {
-    printf("FB-1\n");
-    printf("Total Time: %d\n", total_time);
-    int numberofaciveprocesses = 0; // Maximum number of queues
-    int n = processes.size(); // Maximum number of queues
+    int numberofactiveprocesses = 0; // Maximum number of queues
+    int n = processes.size();       // Total number of processes
     std::vector<process> backup_processes = processes;
     std::vector<std::queue<process>> feedback_queues(n); // Feedback queues
     int current_time = 0;
-    int quantum;
-    int time_slice ;
+    int process_index = 0; // Index to track processes
 
     // Sort processes by arrival time initially
     std::sort(processes.begin(), processes.end(), [](const process& a, const process& b) {
         return a.arrival_time < b.arrival_time;
     });
 
+    // Define time quantum for each feedback queue level
+    std::vector<int> time_quantum(n);
+    for (int i = 0; i < n; i++) {
+        time_quantum[i] = (1 << i); // Time quantum doubles at each lower-priority level
+    }
+
     while (current_time < total_time) {
-
-        while (!processes.empty() && processes[0].arrival_time <= current_time) {
-            feedback_queues[0].push(processes[0]);
-            numberofaciveprocesses++;
-
-            processes.erase(processes.begin());
+        // Add newly arrived processes to the first feedback queue
+        while (process_index < n && processes[process_index].arrival_time <= current_time) {
+            feedback_queues[0].push(processes[process_index]);
+            numberofactiveprocesses++;
+            process_index++;
         }
 
         bool process_executed = false;
+
+        // Iterate over feedback queues
         for (int i = 0; i < n; i++) {
-            quantum = pow(2, i);
             if (!feedback_queues[i].empty()) {
                 process current_process = feedback_queues[i].front();
                 feedback_queues[i].pop();
-                time_slice = std:: min(quantum, current_process.remaining_service_time);
 
-                for (int j = 0; j < time_slice; j++) {
+                // Execute the process for the time quantum or until it finishes
+                int quantum = time_quantum[i];
+                int time_slice = std::min(quantum, current_process.remaining_service_time);
+
+                for (int t = 0; t < time_slice; t++) {
                     output.push_back(current_process.name);
-                    current_process.remaining_service_time -= 1;
-                    current_time += 1;
-                    process_executed = true;
+                    current_process.remaining_service_time--;
+                    current_time++;
+
+                    while (process_index < n && processes[process_index].arrival_time <= current_time) {
+                        feedback_queues[0].push(processes[process_index]);
+                        numberofactiveprocesses++;
+                        process_index++;
+                    }
                 }
 
+                process_executed = true;
+
+                // Check if the process is finished
                 if (current_process.remaining_service_time == 0) {
-                    numberofaciveprocesses--;
+                    numberofactiveprocesses--;
                     current_process.finish_time = current_time;
                 } else {
-                            if (numberofaciveprocesses == 1 && processes[0].arrival_time!=current_time+1) {
-                                feedback_queues[i].push(current_process);
-                            }
-                            else
-                            {
-                                if (i + 1 < n) {
-                                    feedback_queues[i + 1].push(current_process);
-                                } 
-                                else {
-                                    feedback_queues[i].push(current_process);
-                                }
-                            }
+                    if (i==0 && numberofactiveprocesses==1) {
+                        feedback_queues[i].push(current_process);
+                    } else
+                    if (i + 1 < n) {
+                        feedback_queues[i + 1].push(current_process);
+                    } else {
+                        feedback_queues[i].push(current_process);
+                    }
                 }
-                break;
+
+                break; 
             }
         }
 
@@ -597,8 +629,6 @@ std::vector<std::string> FB_2i(std::vector<process>& processes, std::vector<std:
     processes = backup_processes; // Restore original process list
     return output;
 }
-
-
 
 // Algorithm Applying
 std::vector<std::string> apply_algorithm(const algorithm& algo, std::vector<process>& processes, int total_time) {
@@ -621,7 +651,7 @@ std::vector<std::string> apply_algorithm(const algorithm& algo, std::vector<proc
             output = HRRN(processes, output);
             break;
         case 6:
-            printf("FB-1\n");
+            // printf("FB-1\n");
 
             output = FB_1(processes, output,total_time);
             break;
@@ -639,7 +669,7 @@ std::vector<std::string> apply_algorithm(const algorithm& algo, std::vector<proc
 
         break;
     }
-    updateFinishTimes(processes, output);
+    calculateStatsFromOutput(output, processes);
     return output;
 }
 
@@ -656,6 +686,7 @@ int main() {
 
     for (const auto& algo : algorithms) {
         std::string algoName;
+      
         switch (algo.algorithm_id) {
             case 1:
                 algoName = "FCFS";
@@ -674,8 +705,7 @@ int main() {
                 break;
             case 6:
                 algoName = "FB-1";
-                printf("FB-1\n");
-                break;
+               break;
             case 7:
                 algoName = "FB-2i";
                 break;
@@ -686,16 +716,19 @@ int main() {
                 algoName = "Unknown";
                 break;
         }
-        printf("lastInstant: %d\n", lastInstant);
+        if (algo.quantum>=0) {
+            algoName = algoName + "-" + std::to_string(algo.quantum);
+        }
+        // printf("lastInstant: %d\n", lastInstant);
         std::vector<std::string> output = apply_algorithm(algo, processes, lastInstant);
 
 
-        std::cout << std::left;
-        std::cout << std::setw(6) << algoName;
+        // std::cout << std::left;
+        // std::cout << std::setw(6) << algoName;
         // outputTrace(processes, output); 
 
         if (operation == "trace") {
-            outputTrace(processes, output);
+            outputTrace(processes, output,algoName);
         } else if (operation == "stats") {
             outputStats(processes, algoName);
         } else {
