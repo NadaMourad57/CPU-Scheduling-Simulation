@@ -754,9 +754,12 @@ int main() {
     std::vector<process> processes;
     parseInput(operation, algorithms, lastInstant, processes, numProcesses);
 
+    // Create a backup of the initial processes vector
+    std::vector<process> initialProcesses = processes;
+
     for (const auto& algo : algorithms) {
         std::string algoName;
-      
+
         switch (algo.algorithm_id) {
             case 1:
                 algoName = "FCFS";
@@ -775,7 +778,7 @@ int main() {
                 break;
             case 6:
                 algoName = "FB-1";
-               break;
+                break;
             case 7:
                 algoName = "FB-2i";
                 break;
@@ -789,16 +792,15 @@ int main() {
         if (algoName == "RR") {
             algoName = algoName + "-" + std::to_string(algo.quantum);
         }
-        // printf("lastInstant: %d\n", lastInstant);
+
+        // Restore the processes vector to its initial state
+        processes = initialProcesses;
+
+        // Apply the algorithm
         std::vector<std::string> output = apply_algorithm(algo, processes, lastInstant);
 
-
-        // std::cout << std::left;
-        // std::cout << std::setw(6) << algoName;
-        // outputTrace(processes, output); 
-
         if (operation == "trace") {
-            outputTrace(processes, output,algoName);
+            outputTrace(processes, output, algoName);
         } else if (operation == "stats") {
             outputStats(processes, algoName);
         } else {
@@ -808,3 +810,4 @@ int main() {
 
     return 0;
 }
+
