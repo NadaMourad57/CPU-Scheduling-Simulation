@@ -13,6 +13,7 @@ struct process {
     int arrival_time;
     int initial_priority;
     int current_priority;
+    int insert_time=0;
     int service_time;
     int remaining_service_time;
     int finish_time = 0;
@@ -126,7 +127,8 @@ void outputTrace( std::vector<process>& processes,  std::vector<std::string>& ou
         std::cout << " ";
         std::cout << "\n";
     }
-    std::cout << "------------------------------------------------";
+std::cout << "------------------------------------------------\n";
+std::cout << "\n";
 }
 void outputStats(const std::vector<process>& processes, const std::string& algoName) {
     std::cout << algoName << "\n";
@@ -400,6 +402,7 @@ std::vector<std::string> aging(std::vector<process>& processes, int total_time, 
         for (auto& process : processes) {
             if (process.arrival_time <= current_time && !process.in_queue) {
                 process.current_priority = process.initial_priority;
+                process.insert_time = current_time;
                 process.in_queue = true;
                 ready_queue.push_back(&process);
             }
@@ -418,7 +421,7 @@ std::vector<std::string> aging(std::vector<process>& processes, int total_time, 
             if (!current_process || 
                 (*it)->current_priority > current_process->current_priority ||
                 ((*it)->current_priority == current_process->current_priority && 
-                 (*it)->arrival_time < current_process->arrival_time)) {
+                 (*it)->insert_time < current_process->insert_time)) {
                 current_process = *it;
                 highest_priority_it = it;
             }
@@ -439,6 +442,7 @@ std::vector<std::string> aging(std::vector<process>& processes, int total_time, 
                 if (process.arrival_time <= current_time && !process.in_queue) {
                     process.current_priority = process.initial_priority;
                     process.in_queue = true;
+                    process.insert_time = current_time;
                     ready_queue.push_back(&process);
                 }
             }
@@ -453,12 +457,12 @@ std::vector<std::string> aging(std::vector<process>& processes, int total_time, 
             completed_quantum = (executed_time == quantum);
         }
         
-        // Handle process after execution
         if (current_time < total_time) {
             if (completed_quantum || !ready_queue.empty()) {
                 current_process->current_priority = current_process->initial_priority;
             }
             ready_queue.push_back(current_process);
+            current_process->insert_time = current_time;
         }
     }
     
