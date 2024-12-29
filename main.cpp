@@ -390,63 +390,80 @@ std::vector<std::string> aging(std::vector<process>& processes, int total_time, 
     int current_time = 0;
     std::vector<process*> ready_queue;
 
+    // Sort processes by arrival time
     std::sort(processes.begin(), processes.end(), [](const process& a, const process& b) {
         return a.arrival_time < b.arrival_time;
     });
-
-    while (current_time <total_time) {
-        // Add processes that have arrived to the ready queue
+    
+    while (current_time < total_time) {
+        // Add newly arrived processes to ready queue
         for (auto& process : processes) {
             if (process.arrival_time <= current_time && !process.in_queue) {
-                process.current_priority= process.initial_priority+1;
+                process.current_priority = process.initial_priority;
                 process.in_queue = true;
                 ready_queue.push_back(&process);
             }
         }
-
+        
         if (ready_queue.empty()) {
             output.push_back("-");
             current_time++;
             continue;
         }
-        else{
-
-         auto highest_priority_process = std::max_element(ready_queue.begin(), ready_queue.end(),
-            [](const process* a, const process* b) {
-                return a->current_priority < b->current_priority || (a->current_priority == b->current_priority && a->arrival_time < b->arrival_time);
-            });
-
-        process* current_process = *highest_priority_process;
-        ready_queue.erase(highest_priority_process);
-
-        // Execute the process for the quantum
-        for (int i = 0; i < quantum; ++i) {
+        
+        // Find highest priority process with special handling for equal priorities
+        process* current_process = nullptr;
+        auto highest_priority_it = ready_queue.begin();
+        for (auto it = ready_queue.begin(); it != ready_queue.end(); ++it) {
+            if (!current_process || 
+                (*it)->current_priority > current_process->current_priority ||
+                ((*it)->current_priority == current_process->current_priority && 
+                 (*it)->arrival_time < current_process->arrival_time)) {
+                current_process = *it;
+                highest_priority_it = it;
+            }
+        }
+        
+        ready_queue.erase(highest_priority_it);
+        
+        // Execute process
+        bool completed_quantum = false;
+        int executed_time = 0;
+        while (executed_time < quantum && current_time < total_time) {
             output.push_back(current_process->name);
+            current_time++;
+            executed_time++;
+            
+            // Check for new arrivals
             for (auto& process : processes) {
                 if (process.arrival_time <= current_time && !process.in_queue) {
+                    process.current_priority = process.initial_priority;
                     process.in_queue = true;
-                    process.current_priority = process.initial_priority + 1;
                     ready_queue.push_back(&process);
                 }
             }
-
-            for (auto& process : ready_queue) {
-                process->current_priority++;
+            
+            // Age waiting processes
+            for (auto* process : ready_queue) {
+                if (process != current_process) {
+                    process->current_priority++;
+                }
             }
-
-            if (current_time > total_time) {
-                break;
-            }
-            current_time++;
+            
+            completed_quantum = (executed_time == quantum);
         }
-        current_process->current_priority = current_process->initial_priority;
-        ready_queue.push_back(current_process);
+        
+        // Handle process after execution
+        if (current_time < total_time) {
+            if (completed_quantum || !ready_queue.empty()) {
+                current_process->current_priority = current_process->initial_priority;
+            }
+            ready_queue.push_back(current_process);
+        }
     }
-    }
-
+    
     return output;
 }
-
 //------------------------------------------------------------------------------------------------------------------------//
 //Shortest Process Next
 std::vector<std::string> SPN(std::vector<process>& processes, std::vector<std::string>& output) {
